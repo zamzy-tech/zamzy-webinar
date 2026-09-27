@@ -143,19 +143,59 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () { burstConfetti(btn); });
     });
 
-    /* ---------- CONTACT FORM (demo submit) ---------- */
+    /* ---------- CONTACT FORM (AJAX to MySQL webinar db) ---------- */
     var form = document.getElementById('contactForm');
     var status = document.getElementById('formStatus');
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            return;
-        }
-        status.innerHTML = '<div class="alert alert-success mt-2 mb-0" style="border-radius:12px;"><i class="bi bi-check-circle-fill me-2"></i>Thanks! Your message has been sent.</div>';
-        form.reset();
-        form.classList.remove('was-validated');
-    });
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+
+            var submitBtn = form.querySelector('button[type="submit"]');
+            var originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Send Message';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Sending...';
+            }
+
+            var formData = {
+                name: (document.getElementById('cf-name') ? document.getElementById('cf-name').value.trim() : ''),
+                email: (document.getElementById('cf-email') ? document.getElementById('cf-email').value.trim() : ''),
+                subject: (document.getElementById('cf-subject') ? document.getElementById('cf-subject').value.trim() : ''),
+                message: (document.getElementById('cf-message') ? document.getElementById('cf-message').value.trim() : '')
+            };
+
+            fetch('submit-contact.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    status.innerHTML = '<div class="alert alert-success mt-2 mb-0 d-flex align-items-center gap-2" style="border-radius:12px;"><i class="bi bi-check-circle-fill"></i> ' + data.message + '</div>';
+                    form.reset();
+                    form.classList.remove('was-validated');
+                } else {
+                    status.innerHTML = '<div class="alert alert-danger mt-2 mb-0 d-flex align-items-center gap-2" style="border-radius:12px;"><i class="bi bi-exclamation-triangle-fill"></i> ' + (data.message || 'Something went wrong.') + '</div>';
+                }
+            })
+            .catch(function(err) {
+                status.innerHTML = '<div class="alert alert-danger mt-2 mb-0 d-flex align-items-center gap-2" style="border-radius:12px;"><i class="bi bi-exclamation-triangle-fill"></i> Unable to send message. Please ensure the local server is running.</div>';
+            })
+            .finally(function() {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                }
+            });
+        });
+    }
 
 });
 
